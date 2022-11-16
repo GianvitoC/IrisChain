@@ -4,7 +4,7 @@
 #
 ## CLI commands
 ### Go into iris-network folder
-cd /yourRootPath/fabric-samples/iris-network
+cd /yourHyperledgerFabricPath/fabric-samples/iris-network
 
 ### Remove artifacts from previous run
 ./iris-network.sh down
