@@ -1,4 +1,7 @@
 # IrisChain
+### To work with "IrisChain": 
+### copy the folder "iris-network" into HyperLedger-Fabric's folder "fabric-samples"
+#
 ## CLI commands
 ### Remove artifacts from previous run
 ./iris-network.sh down
