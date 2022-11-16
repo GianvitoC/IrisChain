@@ -3,6 +3,9 @@
 ### copy the folder "iris-network" into HyperLedger-Fabric's folder "fabric-samples"
 #
 ## CLI commands
+### Go into iris-network folder
+cd /yourRootPath/fabric-samples/iris-network
+
 ### Remove artifacts from previous run
 ./iris-network.sh down
 
