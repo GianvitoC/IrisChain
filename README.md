@@ -140,3 +140,9 @@ peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.iri
 peer chaincode query -C mychannel -n basic -c '{"Args":["GetAllAssets"]}'
 
 
+
+# Run Fabric App
+### cd localpath/iris-network/asset-transfer-basic/application-gateway-typescript
+npm install
+npm start
+

@@ -13,21 +13,23 @@ type SmartContract struct {
 }
 
 // Asset describes basic details of what makes up a simple asset
-//Insert struct field in alphabetic order => to achieve determinism across languages
+// Insert struct field in alphabetic order => to achieve determinism across languages
 // golang keeps the order when marshal to json but doesn't order automatically
 type Asset struct {
-	ID             	    string `json:"UserID"`
-	TemplateLocation 	string `json:"TemplateLocation"`
-	ListeningPort    	int    `json:"ListeningPort"`
-	FragmentNumber    	int    `json:"FragmentNumber"`
+	ID             string `json:"AssetID"`
+	UserID         string `json:"UserID"`
+	Location       string `json:"Location"`
+	Port           int    `json:"Port"`
+	FragmentNumber int    `json:"FragmentNumber"`
+	Flag           int    `json:"Flag"`
 }
 
 // InitLedger adds a base set of assets to the ledger
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
 	assets := []Asset{
-		{ID: "User1", TemplateLocation: "peer0.org1.irischain.com", ListeningPort: 7051, FragmentNumber:1},
-		{ID: "User2", TemplateLocation: "peer0.org2.irischain.com", ListeningPort: 9051, FragmentNumber:1},
-		{ID: "User3", TemplateLocation: "peer0.org3.irischain.com", ListeningPort: 11051, FragmentNumber:1},
+		{ID: "asset01", UserID: "User1@org1.irischain.com", Location: "peer0.org1.irischain.com", Port: 7051, FragmentNumber: 1, Flag: 0},
+		{ID: "asset02", UserID: "User1@org1.irischain.com", Location: "peer0.org2.irischain.com", Port: 9051, FragmentNumber: 2, Flag: 0},
+		{ID: "asset03", UserID: "User1@org1.irischain.com", Location: "peer0.org3.irischain.com", Port: 11051, FragmentNumber: 3, Flag: 0},
 	}
 
 	for _, asset := range assets {
@@ -46,7 +48,7 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 }
 
 // CreateAsset issues a new asset to the world state with given details.
-func (s *SmartContract) CreateAsset(ctx contractapi.TransactionContextInterface, id string, loc string, port int, frgnum int) error {
+func (s *SmartContract) CreateAsset(ctx contractapi.TransactionContextInterface, id string, us string, loc string, port int, frgnum int, flg int) error {
 	exists, err := s.AssetExists(ctx, id)
 	if err != nil {
 		return err
@@ -56,10 +58,12 @@ func (s *SmartContract) CreateAsset(ctx contractapi.TransactionContextInterface,
 	}
 
 	asset := Asset{
-		ID:             	   id,
-		TemplateLocation:      loc,
-		ListeningPort:         port,
-		FragmentNumber:		   frgnum,
+		ID:             id,
+		UserID:         us,
+		Location:       loc,
+		Port:           port,
+		FragmentNumber: frgnum,
+		Flag:           flg,
 	}
 	assetJSON, err := json.Marshal(asset)
 	if err != nil {
