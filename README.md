@@ -41,6 +41,9 @@ export CORE_PEER_ADDRESS=localhost:9051
 
 ### Ledger query - Read specific asset
 peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","User2"]}'
+peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","asset01"]}'
+peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","asset02"]}'
+peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","asset03"]}'
 
 ### Ledger update through Smart Contract (chaincode)
 peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.irischain.com --tls --cafile "${PWD}/organizations/ordererOrganizations/irischain.com/orderers/orderer.irischain.com/msp/tlscacerts/tlsca.irischain.com-cert.pem" -C mychannel -n basic --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.irischain.com/peers/peer0.org2.irischain.com/tls/ca.crt" --peerAddresses localhost:11051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org3.irischain.com/peers/peer0.org3.irischain.com/tls/ca.crt" -c '{"function":"CreateAsset","Args":["User4","peer0.org3.irischain.com","11051","1"]}'
