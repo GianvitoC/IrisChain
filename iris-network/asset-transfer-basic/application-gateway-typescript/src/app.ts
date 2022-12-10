@@ -5,6 +5,7 @@
  */
 
 import * as grpc from '@grpc/grpc-js';
+import { stringToSubchannelAddress } from '@grpc/grpc-js/build/src/subchannel-address';
 import { connect, Contract, Identity, Signer, signers } from '@hyperledger/fabric-gateway';
 import * as crypto from 'crypto';
 import { promises as fs } from 'fs';
@@ -14,6 +15,11 @@ import { TextDecoder } from 'util';
 const channelName = envOrDefault('CHANNEL_NAME', 'mychannel');
 const chaincodeName = envOrDefault('CHAINCODE_NAME', 'basic');
 const mspId = envOrDefault('MSP_ID', 'Org1MSP');
+const user = 'User1';
+
+// Path to current biometric materials.
+const currPath = envOrDefault('CURR_PATH', path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 'org1.irischain.com', 'peers', 
+'peer0.org1.irischain.com', 'submissions', user));
 
 // Path to crypto materials.
 const cryptoPath = envOrDefault('CRYPTO_PATH', path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 'org1.irischain.com'));
@@ -73,19 +79,28 @@ async function main(): Promise<void> {
         await initLedger(contract);
 
         // Return all the current assets on the ledger.
-        await getAllAssets(contract);
+        //await getAllAssets(contract);
 
         // Create a new asset on the ledger.
-        await createAsset(contract);
+        //await createAsset(contract);
         
         // Return all the current assets on the ledger.
-        await getAllAssets(contract);
+        //await getAllAssets(contract);
         
         // Update an existing asset asynchronously.
         // await transferAssetAsync(contract);
 
         // Get the asset details by assetID.
         // await readAssetByID(contract);
+
+        // Get the Organization a User belongs to.
+        //await getOrga(contract, user);
+
+        // Get the Template of a User.
+        await templateCompare(contract, user);
+
+        // Return all the current assets on the ledger.
+        await getAllAssets(contract);
 
         // Update an asset which does not exist.
         // await updateNonExistentAsset(contract)
@@ -205,6 +220,128 @@ async function readAssetByID(contract: Contract): Promise<void> {
     console.log('*** Result:', result);
 }
 
+async function getOrga(contract:Contract, user: string): Promise<void> {
+    console.log(`\n--> Organization ${user} belongs to:`);
+    const resultBytes = await contract.evaluateTransaction('SearchOrga', user);
+    const resultJson = utf8Decoder.decode(resultBytes);
+    if (resultJson.length>0) {
+        const result = JSON.parse(resultJson);
+        var plh = result[0];
+        for (let idx=0; idx<result.length; idx++) {
+            if (plh !== result[idx]) {
+                throw new Error(`Organization of ${user} not unique!`);
+            }
+        } 
+    } else {
+        throw new Error(`Organization of ${user} not found!`);
+    }
+}
+
+async function templateCompare(contract: Contract, user: string): Promise<void> {
+    console.log(`\n--> Search template location for ${user}, function returns Location, Port and FragmentNumber`);
+
+    const resultBytes = await contract.evaluateTransaction('SearchTemplate', user);
+    const resultOBytes = await contract.evaluateTransaction('SearchOrga', user);
+
+    const resultJson = utf8Decoder.decode(resultBytes);
+    const resultOJson = utf8Decoder.decode(resultOBytes);
+
+    if (resultOJson.length>0) {
+        const resultO = JSON.parse(resultOJson);
+        var plh = resultO[0];
+        for (let idx=0; idx<resultO.length; idx++) {
+            if (plh !== resultO[idx]) {
+                throw new Error(`Organization of ${user} not unique!`);
+            }
+        } 
+
+        if (resultJson.length>0) {
+            const result = JSON.parse(resultJson);
+            console.log('*** Result:', result);
+            const frg1Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
+            result[0]["Location"].slice(6,), 'peers', result[0]["Location"], 'templates', user+"_fragment"+result[0]["FragmentNumber"]+'.txt');
+            const frg1 = await (await fs.readFile(frg1Pth,"utf-8")).split(/\n/);
+            const frg2Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
+            result[1]["Location"].slice(6,), 'peers', result[1]["Location"], 'templates', user+"_fragment"+result[1]["FragmentNumber"]+'.txt');
+            const frg2 = await (await fs.readFile(frg2Pth,"utf-8")).split(/\n/);
+            const frg3Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
+            result[2]["Location"].slice(6,), 'peers', result[2]["Location"], 'templates', user+"_fragment"+result[2]["FragmentNumber"]+'.txt');
+            const frg3 = await (await fs.readFile(frg3Pth,"utf-8")).split(/\n/);
+            const template = frg1.slice(0,87381).concat(frg2.slice(0,87381),frg3.slice(0,87382));
+            if ((frg1.slice(0,87381).length !== Math.round(512*512/3)) ||
+                (frg2.slice(0,87381).length !== Math.round(512*512/3)) ||
+                (frg3.slice(0,87382).length !== Math.round(512*512/3)+1)){
+                    throw new Error("Template Wrong Fragment Length!!!");
+            }
+            if (template.length !== 512*512){
+                throw new Error("1st Template wrong length!!!");
+            }
+            // Calculate Cosine Similarity between submitted biometric material and related template
+            const cur1Pth = path.resolve(currPath, user+"_fragment1.txt")
+            const cur1 = await (await fs.readFile(cur1Pth,"utf-8")).split(/\n/);
+            const cur2Pth = path.resolve(currPath, user+"_fragment2.txt")
+            const cur2 = await (await fs.readFile(cur2Pth,"utf-8")).split(/\n/);
+            const cur3Pth = path.resolve(currPath, user+"_fragment3.txt")
+            const cur3 = await (await fs.readFile(cur3Pth,"utf-8")).split(/\n/);
+            const current = cur1.slice(0,87381).concat(cur2.slice(0,87381),cur3.slice(0,87382));
+            if ((cur1.slice(0,87381).length !== Math.round(512*512/3)) ||
+                (cur2.slice(0,87381).length !== Math.round(512*512/3)) ||
+                (cur3.slice(0,87382).length !== Math.round(512*512/3)+1)){
+                    throw new Error("Submission Wrong Fragment Length!!!");
+            }
+            if (current.length !== 512*512){
+                throw new Error("Submission wrong length!!!");
+            }
+            function convert(x: string) {
+                var floatVal = +(x);
+                return floatVal;
+            }
+            function avgOfProduct(a: string[], b: string[]) {
+                if (a.length !== b.length){
+                    throw new Error("Arrays length not matching!!!")
+                }
+                var avgOP = 0;
+                for (var j in a){
+                    avgOP += (convert(a[j])*convert(b[j]));
+                }
+                return avgOP/a.length;
+            }
+            let cosineDistance = Math.max(0,Math.min(Math.abs(1 - avgOfProduct(template,current)/Math.sqrt(avgOfProduct(template,template)*avgOfProduct(current,current))),2));
+            console.log(`\n--> Register Authentication result of ${user} on Ledger: Flag = 1 --> "Authentication Granted", Flag = -1 --> "Authentication Denied"`);
+            if (cosineDistance<0.1) {
+                console.log(`Authentication Granted for ${user}`);
+                await contract.submitTransaction(
+                    'CreateAsset',
+                    assetId,
+                    user,
+                    'peer0.org1.irischain.com',
+                    '7051',
+                    '0',
+                    '1',
+                );
+            } else {
+                console.log(`Authentication Denied for ${user}`);
+                await contract.submitTransaction(
+                    'CreateAsset',
+                    assetId,
+                    user,
+                    'peer0.org1.irischain.com',
+                    '7051',
+                    '0',
+                    '-1',
+                );
+            }        
+            console.log('*** Transaction committed successfully');
+        } else {
+            throw new Error(`${user} not registered!`);
+        }
+
+    } else {
+        throw new Error(`Organization of ${user} not found!`);
+    }
+
+}
+
 /**
  * submitTransaction() will throw an error containing details of any error responses from the smart contract.
  */
@@ -247,3 +384,29 @@ async function displayInputParameters(): Promise<void> {
     console.log(`peerEndpoint:      ${peerEndpoint}`);
     console.log(`peerHostAlias:     ${peerHostAlias}`);
 }
+
+/** User Authentication 
+
+async function authenticateUser(contract: Contract): Promise<void> {
+    const crypto = require("crypto");
+    const certfl = await fs.readFile(certPath);
+    const cert = new crypto.X509Certificate(certfl);
+    const value = cert.subject;
+    let position = value.search("CN=");
+    let cname = value.slice(position+3,value.length);
+    console.log('\n--> User Identity:  ' + cname);
+    console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, UserID, Node, Port, FragmentNumber and Flag arguments');
+
+    await contract.submitTransaction(
+        'CreateAsset',
+        assetId,
+        cname,
+        'peer0.org1.irischain.com',
+        '7051',
+        '0',
+        '1',
+    );
+
+    console.log('*** Transaction committed successfully');
+}
+*/
