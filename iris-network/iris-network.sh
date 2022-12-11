@@ -227,6 +227,31 @@ function createOrgs() {
 
   infoln "Generating CCP files for Org1, Org2 and Org3"
   ./organizations/ccp-generate.sh
+
+  # Ledger is initialized with User1 --> include template fragments at Network Creation stage
+  mkdir ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org1.irischain.com/peers/peer1.org1.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org1.irischain.com/peers/peer2.org1.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  mkdir ./organizations/peerOrganizations/org1.irischain.com/peers/peer1.org1.irischain.com/submissions
+  mkdir ./organizations/peerOrganizations/org1.irischain.com/peers/peer2.org1.irischain.com/submissions
+  cp ./templates/User1_fragment1.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer0.org2.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer1.org2.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer2.org2.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer0.org2.irischain.com/submissions
+  mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer1.org2.irischain.com/submissions
+  mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer2.org2.irischain.com/submissions
+  cp ./templates/User1_fragment2.txt ./organizations/peerOrganizations/org2.irischain.com/peers/peer0.org2.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer0.org3.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer1.org3.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer2.org3.irischain.com/templates
+  mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer0.org3.irischain.com/submissions
+  mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer1.org3.irischain.com/submissions
+  mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer2.org3.irischain.com/submissions
+  cp ./templates/User1_fragment3.txt ./organizations/peerOrganizations/org3.irischain.com/peers/peer0.org3.irischain.com/templates
+  infoln "Template fragment to initialize Ledger added."
+
 }
 
 # Once you create the organization crypto material, you need to create the

@@ -218,3 +218,34 @@ func (s *SmartContract) SearchTemplate(ctx contractapi.TransactionContextInterfa
 	return users, nil
 
 }
+
+// Search User presence inside the Ledger.
+func (s *SmartContract) SearchUser(ctx contractapi.TransactionContextInterface, userid string) ([]string, error) {
+	// range query with empty string for startKey and endKey does an
+	// open-ended query of all assets in the chaincode namespace.
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var users []string
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var asset Asset
+		err = json.Unmarshal(queryResponse.Value, &asset)
+		if err != nil {
+			return nil, err
+		}
+		if strings.Contains(getFieldString(&asset, "UserID"), userid) {
+			users = append(users, getFieldString(&asset, "UserID"))
+		}
+	}
+
+	return users, nil
+
+}

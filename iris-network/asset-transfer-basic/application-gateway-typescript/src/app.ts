@@ -15,11 +15,16 @@ import { TextDecoder } from 'util';
 const channelName = envOrDefault('CHANNEL_NAME', 'mychannel');
 const chaincodeName = envOrDefault('CHAINCODE_NAME', 'basic');
 const mspId = envOrDefault('MSP_ID', 'Org1MSP');
-const user = 'User1';
+
+// Network topology
+var networkTopology = ['org1.irischain.com', 'org2.irischain.com', 'org3.irischain.com'];
+
+// Current User
+const user = 'User2';
 
 // Path to current biometric materials.
 const currPath = envOrDefault('CURR_PATH', path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 'org1.irischain.com', 'peers', 
-'peer0.org1.irischain.com', 'submissions', user));
+'peer0.org1.irischain.com', 'submissions'));
 
 // Path to crypto materials.
 const cryptoPath = envOrDefault('CRYPTO_PATH', path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 'org1.irischain.com'));
@@ -92,12 +97,13 @@ async function main(): Promise<void> {
 
         // Get the asset details by assetID.
         // await readAssetByID(contract);
+        
+        // Enrol User
+        await enrolUser(contract, user, currPath);
 
-        // Get the Organization a User belongs to.
-        //await getOrga(contract, user);
+        // Authenticate User
+        //await authenticateUser(contract, user, currPath);
 
-        // Get the Template of a User.
-        await templateCompare(contract, user);
 
         // Return all the current assets on the ledger.
         await getAllAssets(contract);
@@ -220,7 +226,7 @@ async function readAssetByID(contract: Contract): Promise<void> {
     console.log('*** Result:', result);
 }
 
-async function getOrga(contract:Contract, user: string): Promise<void> {
+async function getOrga(contract:Contract, user: string): Promise<string> {
     console.log(`\n--> Organization ${user} belongs to:`);
     const resultBytes = await contract.evaluateTransaction('SearchOrga', user);
     const resultJson = utf8Decoder.decode(resultBytes);
@@ -232,114 +238,183 @@ async function getOrga(contract:Contract, user: string): Promise<void> {
                 throw new Error(`Organization of ${user} not unique!`);
             }
         } 
+        console.log(plh);
+        console.log(typeof plh);
+        return plh;
     } else {
         throw new Error(`Organization of ${user} not found!`);
     }
 }
 
-async function templateCompare(contract: Contract, user: string): Promise<void> {
-    console.log(`\n--> Search template location for ${user}, function returns Location, Port and FragmentNumber`);
-
+async function templateCompare(contract: Contract, user: string, currpath: string, curruser: string, verbose="verbose"): Promise<number> {
     const resultBytes = await contract.evaluateTransaction('SearchTemplate', user);
-    const resultOBytes = await contract.evaluateTransaction('SearchOrga', user);
-
     const resultJson = utf8Decoder.decode(resultBytes);
-    const resultOJson = utf8Decoder.decode(resultOBytes);
-
-    if (resultOJson.length>0) {
-        const resultO = JSON.parse(resultOJson);
-        var plh = resultO[0];
-        for (let idx=0; idx<resultO.length; idx++) {
-            if (plh !== resultO[idx]) {
-                throw new Error(`Organization of ${user} not unique!`);
-            }
-        } 
-
-        if (resultJson.length>0) {
-            const result = JSON.parse(resultJson);
+    if (resultJson.length>0) {
+        const result = JSON.parse(resultJson);
+        if (verbose==="verbose") {
+            console.log(`\n--> Search template location for ${user}, function returns Location, Port and FragmentNumber`);
             console.log('*** Result:', result);
-            const frg1Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
-            result[0]["Location"].slice(6,), 'peers', result[0]["Location"], 'templates', user+"_fragment"+result[0]["FragmentNumber"]+'.txt');
-            const frg1 = await (await fs.readFile(frg1Pth,"utf-8")).split(/\n/);
-            const frg2Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
-            result[1]["Location"].slice(6,), 'peers', result[1]["Location"], 'templates', user+"_fragment"+result[1]["FragmentNumber"]+'.txt');
-            const frg2 = await (await fs.readFile(frg2Pth,"utf-8")).split(/\n/);
-            const frg3Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
-            result[2]["Location"].slice(6,), 'peers', result[2]["Location"], 'templates', user+"_fragment"+result[2]["FragmentNumber"]+'.txt');
-            const frg3 = await (await fs.readFile(frg3Pth,"utf-8")).split(/\n/);
-            const template = frg1.slice(0,87381).concat(frg2.slice(0,87381),frg3.slice(0,87382));
-            if ((frg1.slice(0,87381).length !== Math.round(512*512/3)) ||
-                (frg2.slice(0,87381).length !== Math.round(512*512/3)) ||
-                (frg3.slice(0,87382).length !== Math.round(512*512/3)+1)){
-                    throw new Error("Template Wrong Fragment Length!!!");
-            }
-            if (template.length !== 512*512){
-                throw new Error("1st Template wrong length!!!");
-            }
-            // Calculate Cosine Similarity between submitted biometric material and related template
-            const cur1Pth = path.resolve(currPath, user+"_fragment1.txt")
-            const cur1 = await (await fs.readFile(cur1Pth,"utf-8")).split(/\n/);
-            const cur2Pth = path.resolve(currPath, user+"_fragment2.txt")
-            const cur2 = await (await fs.readFile(cur2Pth,"utf-8")).split(/\n/);
-            const cur3Pth = path.resolve(currPath, user+"_fragment3.txt")
-            const cur3 = await (await fs.readFile(cur3Pth,"utf-8")).split(/\n/);
-            const current = cur1.slice(0,87381).concat(cur2.slice(0,87381),cur3.slice(0,87382));
-            if ((cur1.slice(0,87381).length !== Math.round(512*512/3)) ||
-                (cur2.slice(0,87381).length !== Math.round(512*512/3)) ||
-                (cur3.slice(0,87382).length !== Math.round(512*512/3)+1)){
-                    throw new Error("Submission Wrong Fragment Length!!!");
-            }
-            if (current.length !== 512*512){
-                throw new Error("Submission wrong length!!!");
-            }
-            function convert(x: string) {
-                var floatVal = +(x);
-                return floatVal;
-            }
-            function avgOfProduct(a: string[], b: string[]) {
-                if (a.length !== b.length){
-                    throw new Error("Arrays length not matching!!!")
-                }
-                var avgOP = 0;
-                for (var j in a){
-                    avgOP += (convert(a[j])*convert(b[j]));
-                }
-                return avgOP/a.length;
-            }
-            let cosineDistance = Math.max(0,Math.min(Math.abs(1 - avgOfProduct(template,current)/Math.sqrt(avgOfProduct(template,template)*avgOfProduct(current,current))),2));
-            console.log(`\n--> Register Authentication result of ${user} on Ledger: Flag = 1 --> "Authentication Granted", Flag = -1 --> "Authentication Denied"`);
-            if (cosineDistance<0.1) {
-                console.log(`Authentication Granted for ${user}`);
-                await contract.submitTransaction(
-                    'CreateAsset',
-                    assetId,
-                    user,
-                    'peer0.org1.irischain.com',
-                    '7051',
-                    '0',
-                    '1',
-                );
-            } else {
-                console.log(`Authentication Denied for ${user}`);
-                await contract.submitTransaction(
-                    'CreateAsset',
-                    assetId,
-                    user,
-                    'peer0.org1.irischain.com',
-                    '7051',
-                    '0',
-                    '-1',
-                );
-            }        
-            console.log('*** Transaction committed successfully');
-        } else {
-            throw new Error(`${user} not registered!`);
         }
-
+        // 1st version (temporary): unique fs
+        const frg1Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
+        result[0]["Location"].slice(6,), 'peers', result[0]["Location"], 'templates', user+"_fragment"+result[0]["FragmentNumber"]+'.txt');
+        const frg1 = await (await fs.readFile(frg1Pth,"utf-8")).split(/\n/);
+        const frg2Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
+        result[1]["Location"].slice(6,), 'peers', result[1]["Location"], 'templates', user+"_fragment"+result[1]["FragmentNumber"]+'.txt');
+        const frg2 = await (await fs.readFile(frg2Pth,"utf-8")).split(/\n/);
+        const frg3Pth = path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 
+        result[2]["Location"].slice(6,), 'peers', result[2]["Location"], 'templates', user+"_fragment"+result[2]["FragmentNumber"]+'.txt');
+        const frg3 = await (await fs.readFile(frg3Pth,"utf-8")).split(/\n/);
+        const template = frg1.slice(0,87381).concat(frg2.slice(0,87381),frg3.slice(0,87382));
+        if ((frg1.slice(0,87381).length !== Math.round(512*512/3)) ||
+            (frg2.slice(0,87381).length !== Math.round(512*512/3)) ||
+            (frg3.slice(0,87382).length !== Math.round(512*512/3)+1)){
+                throw new Error("Template Wrong Fragment Length!!!");
+        }
+        if (template.length !== 512*512){
+            throw new Error("1st Template wrong length!!!");
+        }
+        // Calculate Cosine Similarity between submitted biometric material and related template
+        const cur1Pth = path.resolve(currpath, curruser+"_fragment1.txt")
+        const cur1 = await (await fs.readFile(cur1Pth,"utf-8")).split(/\n/);
+        const cur2Pth = path.resolve(currpath, curruser+"_fragment2.txt")
+        const cur2 = await (await fs.readFile(cur2Pth,"utf-8")).split(/\n/);
+        const cur3Pth = path.resolve(currpath, curruser+"_fragment3.txt")
+        const cur3 = await (await fs.readFile(cur3Pth,"utf-8")).split(/\n/);
+        const current = cur1.slice(0,87381).concat(cur2.slice(0,87381),cur3.slice(0,87382));
+        if ((cur1.slice(0,87381).length !== Math.round(512*512/3)) ||
+            (cur2.slice(0,87381).length !== Math.round(512*512/3)) ||
+            (cur3.slice(0,87382).length !== Math.round(512*512/3)+1)){
+                throw new Error("Submission Wrong Fragment Length!!!");
+        }
+        if (current.length !== 512*512){
+            throw new Error("Submission wrong length!!!");
+        }
+        function convert(x: string) {
+            var floatVal = +(x);
+            return floatVal;
+        }
+        function avgOfProduct(a: string[], b: string[]) {
+            if (a.length !== b.length){
+                throw new Error("Arrays length not matching!!!")
+            }
+            var avgOP = 0;
+            for (var j in a){
+                avgOP += (convert(a[j])*convert(b[j]));
+            }
+            return avgOP/a.length;
+        }
+        let cosineDistance = Math.max(0,Math.min(Math.abs(1 - avgOfProduct(template,current)/Math.sqrt(avgOfProduct(template,template)*avgOfProduct(current,current))),2));
+        var cosExt = 0;
+        if (cosineDistance<0.1) {
+            cosExt = 1;
+            return cosExt;
+        } else {
+            cosExt = -1;
+            return cosExt;
+        }        
     } else {
-        throw new Error(`Organization of ${user} not found!`);
+        throw new Error(`${user} not registered!`);
     }
 
+}
+
+async function authenticateUser(contract: Contract, user: string, currpath: string): Promise<void>{
+    const plh = await getOrga(contract, user);
+    const userid = user+'@'+plh;
+    const cosExt = await templateCompare(contract, user, currpath, user);
+    console.log(`\n--> Register Authentication result of "${user}" on Ledger:`);
+    if (cosExt===1) {
+        console.log(`*** Authentication Granted for "${user}"`);
+        await contract.submitTransaction(
+            'CreateAsset',
+            assetId,
+            userid,
+            'peer0.org1.irischain.com',
+            '7051',
+            '0',
+            '1',
+        );
+    } else {
+        console.log(`*** Authentication Denied for "${user}"`);
+        await contract.submitTransaction(
+            'CreateAsset',
+            assetId,
+            userid,
+            'peer0.org1.irischain.com',
+            '7051',
+            '0',
+            '-1',
+        );
+    }        
+    console.log('*** Transaction committed successfully into the Ledger!');
+}
+
+async function enrolUser(contract: Contract, user: string, currpath: string): Promise<void>{
+    const receivingOrga = peerHostAlias.slice(peerHostAlias.search("org"),);
+    const userid = user + '@' + receivingOrga;
+    // Check that User is not already registered 
+    console.log("\n--> Check that enrolling User isn't already registered.")
+    const resultBytes = await contract.evaluateTransaction("SearchUser", user);
+    const resultJson = utf8Decoder.decode(resultBytes);
+    if (resultJson.length>0) {
+        console.log(`*** "${user}" already Registered, no Enrolment needed!`)
+    } else {
+        console.log(`*** "${user}" not yet present in the Ledger!`);
+        // 1st version (temporary): unique fs 
+        // Uniqueness check of submitted biometric material
+        console.log("\n--> Check uniqueness of submitted biometric material.")
+        var cosExt = -1;
+        let i = 0;
+        while (cosExt === -1 && i<networkTopology.length) {
+            var users = await fs.readdir(path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[i], 'users'));
+            let j = 0;
+            while(j<users.length) {
+                if(users[j].search("Admin") == -1) {
+                    var usridx = users[j].search("@"+networkTopology[i]);
+                    var usr = users[j].slice(0,usridx);
+                    const verbose = "no";
+                    var cosExt = await templateCompare(contract, usr, currpath, user, verbose);
+                    if (cosExt === -1) {
+                    }
+                }
+                j++;
+            }
+            i ++;
+        }
+        if (cosExt === -1) {
+            console.log(`*** Uniqueness of submitted biometric material for "${user}" verified!`);
+            // Key-pair generation, at the moment, only directory is created!
+            //console.log("\n--> Crypto material generation");
+            var userDir = path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations',receivingOrga, 'users',userid);
+            await fs.mkdir(userDir);
+            // Store template fragments and register the transaction in the Ledger
+            for (i=0; i<3; i++) {
+                var destOrga = Math.floor(Math.random()*networkTopology.length);
+                var destPeerList = await fs.readdir(path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[destOrga],'peers'));
+                var destPeer = Math.floor(Math.random()*destPeerList.length);
+                var src = path.resolve(currpath, user+"_fragment"+(i+1).toString()+'.txt');
+                var dst = path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[destOrga],'peers', destPeerList[destPeer],'templates',
+                user+"_fragment"+(i+1).toString()+'.txt');
+                await fs.copyFile(src, dst, fs.constants.COPYFILE_EXCL);
+                console.log(`\n*** "${user}" Template fragment "${i+1}" assigned to peer "${destPeerList[destPeer]}"`);
+                // Record transaction in the Ledger, at the moment 7051 is assumed to be the "well-known" port!
+                await contract.submitTransaction(
+                    'CreateAsset',
+                    `asset${Date.now()}`,
+                    userid,
+                    destPeerList[destPeer],
+                    '7051',
+                    (i+1).toString(),
+                    '0',
+                );
+                console.log("*** Transaction committed successfully into the Ledger!");
+            }
+
+        } else {
+            console.log("*** Match found, submitted biometric material not unique! \n*** Enrolment denied.");
+        }
+    }
 }
 
 /**
