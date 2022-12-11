@@ -3,6 +3,8 @@ package chaincode
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -22,6 +24,23 @@ type Asset struct {
 	Port           int    `json:"Port"`
 	FragmentNumber int    `json:"FragmentNumber"`
 	Flag           int    `json:"Flag"`
+}
+
+type User struct {
+	Location       string `json:"Location"`
+	Port           int    `json:"Port"`
+	FragmentNumber int    `json:"FragmentNumber"`
+}
+
+func getFieldString(a *Asset, field string) string {
+	r := reflect.ValueOf(a)
+	f := reflect.Indirect(r).FieldByName(field)
+	return f.String()
+}
+func getFieldInteger(a *Asset, field string) int {
+	r := reflect.ValueOf(a)
+	f := reflect.Indirect(r).FieldByName(field)
+	return int(f.Int())
 }
 
 // InitLedger adds a base set of assets to the ledger
@@ -128,4 +147,105 @@ func (s *SmartContract) GetAllAssets(ctx contractapi.TransactionContextInterface
 	}
 
 	return assets, nil
+}
+
+// Search the Organization the User belongs to.
+func (s *SmartContract) SearchOrga(ctx contractapi.TransactionContextInterface, userid string) ([]string, error) {
+	// range query with empty string for startKey and endKey does an
+	// open-ended query of all assets in the chaincode namespace.
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var orgas []string
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var asset Asset
+		err = json.Unmarshal(queryResponse.Value, &asset)
+		if err != nil {
+			return nil, err
+		}
+		if strings.Contains(getFieldString(&asset, "UserID"), userid) && getFieldInteger(&asset, "Flag") == 0 {
+			var orga = strings.Index(getFieldString(&asset, "UserID"), "@")
+			if orga > -1 {
+				orgas = append(orgas, getFieldString(&asset, "UserID")[orga+1:])
+			}
+		}
+	}
+
+	return orgas, nil
+
+}
+
+// Search the Ledger by for User Template.
+func (s *SmartContract) SearchTemplate(ctx contractapi.TransactionContextInterface, userid string) ([]*User, error) {
+	// range query with empty string for startKey and endKey does an
+	// open-ended query of all assets in the chaincode namespace.
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var users []*User
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var asset Asset
+		err = json.Unmarshal(queryResponse.Value, &asset)
+		if err != nil {
+			return nil, err
+		}
+		if strings.Contains(getFieldString(&asset, "UserID"), userid) && getFieldInteger(&asset, "Flag") == 0 {
+			user := User{
+				Location:       getFieldString(&asset, "Location"),
+				Port:           getFieldInteger(&asset, "Port"),
+				FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+			}
+			users = append(users, &user)
+		}
+	}
+
+	return users, nil
+
+}
+
+// Search User presence inside the Ledger.
+func (s *SmartContract) SearchUser(ctx contractapi.TransactionContextInterface, userid string) ([]string, error) {
+	// range query with empty string for startKey and endKey does an
+	// open-ended query of all assets in the chaincode namespace.
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	var users []string
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+
+		var asset Asset
+		err = json.Unmarshal(queryResponse.Value, &asset)
+		if err != nil {
+			return nil, err
+		}
+		if strings.Contains(getFieldString(&asset, "UserID"), userid) {
+			users = append(users, getFieldString(&asset, "UserID"))
+		}
+	}
+
+	return users, nil
+
 }
