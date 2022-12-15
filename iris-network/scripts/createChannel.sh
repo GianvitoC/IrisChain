@@ -17,6 +17,7 @@ VERBOSE="$4"
 : ${CONTAINER_CLI_COMPOSE:="${CONTAINER_CLI}-compose"}
 infoln "Using ${CONTAINER_CLI} and ${CONTAINER_CLI_COMPOSE}"
 
+#Se la directory channel-artifacts non esiste creala
 if [ ! -d "channel-artifacts" ]; then
 	mkdir channel-artifacts
 fi
@@ -34,7 +35,7 @@ createChannelGenesisBlock() {
 }
 
 createChannel() {
-	setGlobals 1
+	setGlobals 1 0
 	# Poll in case the raft leader is not set yet
 	local rc=1
 	local COUNTER=1
@@ -55,7 +56,8 @@ createChannel() {
 joinChannel() {
   FABRIC_CFG_PATH=$PWD/../config/
   ORG=$1
-  setGlobals $ORG
+  PEER=$2
+  setGlobals $ORG $PEER
 	local rc=1
 	local COUNTER=1
 	## Sometimes Join takes time, hence retry
@@ -93,11 +95,26 @@ successln "Channel '$CHANNEL_NAME' created"
 
 ## Join all the peers to the channel
 infoln "Joining org1 peer to the channel..."
-joinChannel 1
+infoln "... peer0 ..."
+joinChannel 1 0
+infoln "... peer1 ..."
+joinChannel 1 1
+infoln "... peer2 ..."
+joinChannel 1 2
 infoln "Joining org2 peer to the channel..."
-joinChannel 2
+infoln "... peer0 ..."
+joinChannel 2 0
+infoln "... peer1 ..."
+joinChannel 2 1
+infoln "... peer2 ..."
+joinChannel 2 2
 infoln "Joining org3 peer to the channel..."
-joinChannel 3
+infoln "... peer0 ..."
+joinChannel 3 0
+infoln "... peer1 ..."
+joinChannel 3 1
+infoln "... peer2 ..."
+joinChannel 3 2
 
 ## Set the anchor peers for each org in the channel
 infoln "Setting anchor peer for org1..."

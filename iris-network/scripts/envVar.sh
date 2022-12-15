@@ -21,8 +21,10 @@ export ORDERER_ADMIN_TLS_PRIVATE_KEY=${PWD}/organizations/ordererOrganizations/i
 # Set environment variables for the peer org
 setGlobals() {
   local USING_ORG=""
+  local USING_PEER=""
   if [ -z "$OVERRIDE_ORG" ]; then
     USING_ORG=$1
+    USING_PEER=$2
   else
     USING_ORG="${OVERRIDE_ORG}"
   fi
@@ -31,18 +33,41 @@ setGlobals() {
     export CORE_PEER_LOCALMSPID="Org1MSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG1_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.irischain.com/users/Admin@org1.irischain.com/msp
-    export CORE_PEER_ADDRESS=localhost:7051
+    if [ $USING_PEER -eq 0 ]; then
+      export CORE_PEER_ADDRESS=localhost:7051
+    elif [ $USING_PEER -eq 1 ]; then
+      export CORE_PEER_ADDRESS=localhost:17051
+    elif [ $USING_PEER -eq 2 ]; then
+      export CORE_PEER_ADDRESS=localhost:27051
+    else
+      errorln "PEER Unknown"
+    fi
   elif [ $USING_ORG -eq 2 ]; then
     export CORE_PEER_LOCALMSPID="Org2MSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG2_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.irischain.com/users/Admin@org2.irischain.com/msp
-    export CORE_PEER_ADDRESS=localhost:9051
-
+    if [ $USING_PEER -eq 0 ]; then
+      export CORE_PEER_ADDRESS=localhost:9051
+    elif [ $USING_PEER -eq 1 ]; then
+      export CORE_PEER_ADDRESS=localhost:19051
+    elif [ $USING_PEER -eq 2 ]; then
+      export CORE_PEER_ADDRESS=localhost:29051
+    else
+      errorln "PEER Unknown"
+    fi
   elif [ $USING_ORG -eq 3 ]; then
     export CORE_PEER_LOCALMSPID="Org3MSP"
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG3_CA
     export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org3.irischain.com/users/Admin@org3.irischain.com/msp
-    export CORE_PEER_ADDRESS=localhost:11051
+    if [ $USING_PEER -eq 0 ]; then
+      export CORE_PEER_ADDRESS=localhost:11051
+    elif [ $USING_PEER -eq 1 ]; then
+      export CORE_PEER_ADDRESS=localhost:11061
+    elif [ $USING_PEER -eq 2 ]; then
+      export CORE_PEER_ADDRESS=localhost:11071
+    else
+      errorln "PEER Unknown"
+    fi
   else
     errorln "ORG Unknown"
   fi
@@ -55,7 +80,7 @@ setGlobals() {
 
 # Set environment variables for use in the CLI container
 setGlobalsCLI() {
-  setGlobals $1
+  setGlobals $1 0
 
   local USING_ORG=""
   if [ -z "$OVERRIDE_ORG" ]; then
@@ -81,7 +106,7 @@ parsePeerConnectionParameters() {
   PEER_CONN_PARMS=()
   PEERS=""
   while [ "$#" -gt 0 ]; do
-    setGlobals $1
+    setGlobals $1 0
     PEER="peer0.org$1"
     ## Set peer addresses
     if [ -z "$PEERS" ]

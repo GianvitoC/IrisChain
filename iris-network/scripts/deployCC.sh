@@ -125,19 +125,31 @@ packageChaincode() {
 ## package the chaincode
 packageChaincode
 
-## Install chaincode on peer0.org1, peer0.org2 and peer0.org3
+## Install chaincode on peer0.org1, peer1.org1 and peer2.org1, .......
 infoln "Installing chaincode on peer0.org1..."
-installChaincode 1
-infoln "Install chaincode on peer0.org2..."
-installChaincode 2
-infoln "Install chaincode on peer0.org3..."
-installChaincode 3
+installChaincode 1 0
+infoln "Installing chaincode on peer1.org1..."
+installChaincode 1 1
+infoln "Installing chaincode on peer2.org1..."
+installChaincode 1 2
+infoln "Installing chaincode on peer0.org2..."
+installChaincode 2 0
+infoln "Installing chaincode on peer1.org2..."
+installChaincode 2 1
+infoln "Installing chaincode on peer2.org2..."
+installChaincode 2 2
+infoln "Installing chaincode on peer0.org3..."
+installChaincode 3 0
+infoln "Installing chaincode on peer1.org3..."
+installChaincode 3 1
+infoln "Installing chaincode on peer2.org3..."
+installChaincode 3 2
 
 ## query whether the chaincode is installed
-queryInstalled 1
+queryInstalled 1 0
 
 ## approve the definition for org1
-approveForMyOrg 1
+approveForMyOrg 1 0
 
 ## check whether the chaincode definition is ready to be committed
 ## expect org1 to have approved and org2, org3 not to
@@ -146,7 +158,7 @@ checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Org3MSP\": fa
 checkCommitReadiness 3 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Org3MSP\": false"
 
 ## now approve for org2
-approveForMyOrg 2
+approveForMyOrg 2 0
 
 ## check whether the chaincode definition is ready to be committed
 ## expect org1 and org2 to have approved, org3 not to
@@ -155,7 +167,7 @@ checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": fal
 checkCommitReadiness 3 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": false"
 
 ## now approve for org3
-approveForMyOrg 3
+approveForMyOrg 3 0
 
 ## check whether the chaincode definition is ready to be committed
 ## expect all orgs to have approved
