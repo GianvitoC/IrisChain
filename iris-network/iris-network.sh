@@ -250,8 +250,17 @@ function createOrgs() {
   mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer1.org3.irischain.com/submissions
   mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer2.org3.irischain.com/submissions
   cp ./templates/User1_fragment3.txt ./organizations/peerOrganizations/org3.irischain.com/peers/peer0.org3.irischain.com/templates
-  infoln "Template fragment to initialize Ledger added."
-
+  infoln "Template fragments to initialize Ledger added."
+  cp ./submissions/User1_fragment1.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  cp ./submissions/User2_fragment1.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  cp ./submissions/User3_fragment1.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  cp ./submissions/User1_fragment2.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  cp ./submissions/User2_fragment2.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  cp ./submissions/User3_fragment2.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  cp ./submissions/User1_fragment3.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  cp ./submissions/User2_fragment3.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  cp ./submissions/User3_fragment3.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
+  infoln "Submissions Templates fragments to test and validate the code added."
 }
 
 # Once you create the organization crypto material, you need to create the
