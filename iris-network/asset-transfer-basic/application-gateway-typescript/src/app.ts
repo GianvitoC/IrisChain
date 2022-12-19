@@ -106,7 +106,6 @@ async function main(): Promise<void> {
                     console.log("\n###############################################")
                     console.log("\nTest 3: Successive Enrollment of User already registered")
                     await enrolUser(contract, user, currPath);
-                    await getAllAssets(contract);
                     break;
             }
         }
@@ -292,6 +291,8 @@ async function generateKeyPair(contract: Contract, user: string, currpath: strin
     var seed = forge.util.hexToBytes(secret)
     var ed25519 = forge.pki.ed25519;
     var keypair = ed25519.generateKeyPair({seed: seed});
+    console.log("Elliptic-curve cryptography:")
+    console.log(`--> Edwards-curve Digital Signature Algorithm (EdDSA - Ed25519)`);
     console.log(`Private Key: ${keypair.privateKey.toString('hex')}`);
     console.log(`Public Key: ${keypair.publicKey.toString('hex')}`);
 }
