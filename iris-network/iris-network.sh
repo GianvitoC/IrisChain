@@ -236,6 +236,7 @@ function createOrgs() {
   mkdir ./organizations/peerOrganizations/org1.irischain.com/peers/peer1.org1.irischain.com/submissions
   mkdir ./organizations/peerOrganizations/org1.irischain.com/peers/peer2.org1.irischain.com/submissions
   cp ./templates/User1_fragment1.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/templates
+  cp ./templates/User1_fragment1.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer1.org1.irischain.com/templates
   mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer0.org2.irischain.com/templates
   mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer1.org2.irischain.com/templates
   mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer2.org2.irischain.com/templates
@@ -243,6 +244,7 @@ function createOrgs() {
   mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer1.org2.irischain.com/submissions
   mkdir ./organizations/peerOrganizations/org2.irischain.com/peers/peer2.org2.irischain.com/submissions
   cp ./templates/User1_fragment2.txt ./organizations/peerOrganizations/org2.irischain.com/peers/peer0.org2.irischain.com/templates
+  cp ./templates/User1_fragment2.txt ./organizations/peerOrganizations/org2.irischain.com/peers/peer1.org2.irischain.com/templates
   mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer0.org3.irischain.com/templates
   mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer1.org3.irischain.com/templates
   mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer2.org3.irischain.com/templates
@@ -250,6 +252,7 @@ function createOrgs() {
   mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer1.org3.irischain.com/submissions
   mkdir ./organizations/peerOrganizations/org3.irischain.com/peers/peer2.org3.irischain.com/submissions
   cp ./templates/User1_fragment3.txt ./organizations/peerOrganizations/org3.irischain.com/peers/peer0.org3.irischain.com/templates
+  cp ./templates/User1_fragment3.txt ./organizations/peerOrganizations/org3.irischain.com/peers/peer1.org3.irischain.com/templates
   infoln "Template fragments to initialize Ledger added."
   cp ./submissions/User1_fragment1.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions
   cp ./submissions/User2_fragment1.txt ./organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions

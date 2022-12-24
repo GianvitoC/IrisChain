@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -27,6 +28,7 @@ type Asset struct {
 }
 
 type User struct {
+	ID             string `json:"AssetID"`
 	Location       string `json:"Location"`
 	Port           int    `json:"Port"`
 	FragmentNumber int    `json:"FragmentNumber"`
@@ -46,9 +48,12 @@ func getFieldInteger(a *Asset, field string) int {
 // InitLedger adds a base set of assets to the ledger
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
 	assets := []Asset{
-		{ID: "asset01", UserID: "User1@org1.irischain.com", Location: "peer0.org1.irischain.com", Port: 7051, FragmentNumber: 1, Flag: 0},
-		{ID: "asset02", UserID: "User1@org1.irischain.com", Location: "peer0.org2.irischain.com", Port: 9051, FragmentNumber: 2, Flag: 0},
-		{ID: "asset03", UserID: "User1@org1.irischain.com", Location: "peer0.org3.irischain.com", Port: 11051, FragmentNumber: 3, Flag: 0},
+		{ID: "asset10", UserID: "User1@org1.irischain.com", Location: "peer0.org1.irischain.com", Port: 7051, FragmentNumber: 1, Flag: 0},
+		{ID: "asset11", UserID: "User1@org1.irischain.com", Location: "peer1.org1.irischain.com", Port: 7051, FragmentNumber: 1, Flag: 0},
+		{ID: "asset12", UserID: "User1@org1.irischain.com", Location: "peer0.org2.irischain.com", Port: 9051, FragmentNumber: 2, Flag: 0},
+		{ID: "asset13", UserID: "User1@org1.irischain.com", Location: "peer1.org2.irischain.com", Port: 9051, FragmentNumber: 2, Flag: 0},
+		{ID: "asset14", UserID: "User1@org1.irischain.com", Location: "peer0.org3.irischain.com", Port: 11051, FragmentNumber: 3, Flag: 0},
+		{ID: "asset15", UserID: "User1@org1.irischain.com", Location: "peer1.org3.irischain.com", Port: 11051, FragmentNumber: 3, Flag: 0},
 	}
 
 	for _, asset := range assets {
@@ -194,6 +199,12 @@ func (s *SmartContract) SearchTemplate(ctx contractapi.TransactionContextInterfa
 	defer resultsIterator.Close()
 
 	var users []*User
+	var age1 = 0
+	var age2 = 0
+	var age3 = 0
+	var frg1 User
+	var frg2 User
+	var frg3 User
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
@@ -206,15 +217,39 @@ func (s *SmartContract) SearchTemplate(ctx contractapi.TransactionContextInterfa
 			return nil, err
 		}
 		if strings.Contains(getFieldString(&asset, "UserID"), userid) && getFieldInteger(&asset, "Flag") == 0 {
-			user := User{
-				Location:       getFieldString(&asset, "Location"),
-				Port:           getFieldInteger(&asset, "Port"),
-				FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+			var assetAge = asset.ID[5:]
+			intVar, _ := strconv.Atoi(assetAge)
+			if getFieldInteger(&asset, "FragmentNumber") == 1 {
+				if intVar > age1 {
+					frg1 = User{
+						ID:             asset.ID,
+						Location:       getFieldString(&asset, "Location"),
+						Port:           getFieldInteger(&asset, "Port"),
+						FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+					}
+				}
+			} else if getFieldInteger(&asset, "FragmentNumber") == 2 {
+				if intVar > age2 {
+					frg2 = User{
+						ID:             asset.ID,
+						Location:       getFieldString(&asset, "Location"),
+						Port:           getFieldInteger(&asset, "Port"),
+						FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+					}
+				}
+			} else if getFieldInteger(&asset, "FragmentNumber") == 3 {
+				if intVar > age3 {
+					frg3 = User{
+						ID:             asset.ID,
+						Location:       getFieldString(&asset, "Location"),
+						Port:           getFieldInteger(&asset, "Port"),
+						FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+					}
+				}
 			}
-			users = append(users, &user)
 		}
 	}
-
+	users = append(users, &frg1, &frg2, &frg3)
 	return users, nil
 
 }

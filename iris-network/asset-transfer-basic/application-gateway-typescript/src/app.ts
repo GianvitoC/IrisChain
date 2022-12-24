@@ -13,7 +13,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { TextDecoder } from 'util';
 
-const testList = ['User1', 'User2', 'User3'];
+const testList = ['User1', 'User2', 'User2', 'User3'];
 
 const channelName = envOrDefault('CHANNEL_NAME', 'mychannel');
 const chaincodeName = envOrDefault('CHAINCODE_NAME', 'basic');
@@ -45,7 +45,6 @@ const peerEndpoint = envOrDefault('PEER_ENDPOINT', 'localhost:7051');
 const peerHostAlias = envOrDefault('PEER_HOST_ALIAS', 'peer0.org1.irischain.com');
 
 const utf8Decoder = new TextDecoder();
-const assetId = `asset${Date.now()}`;
 
 async function main(): Promise<void> {
 
@@ -82,7 +81,6 @@ async function main(): Promise<void> {
 
         // Initialize a set of asset data on the ledger using the chaincode 'InitLedger' function.
         await initLedger(contract);
-
         // Implemeted tests
         for (let i=0; i<testList.length;i++){
             let user = testList[i];
@@ -104,7 +102,14 @@ async function main(): Promise<void> {
                 case 2:
                     // Enrol User
                     console.log("\n###############################################")
-                    console.log("\nTest 3: Successive Enrollment of User already registered")
+                    console.log("\nTest 3: Successive Authentication of User just enrolled")
+                    await authenticateUser(contract, user, currPath);
+                    await getAllAssets(contract);
+                    break;
+                case 3:
+                    // Enrol User
+                    console.log("\n###############################################")
+                    console.log("\nTest 4: Successive Enrollment of User already registered")
                     await enrolUser(contract, user, currPath);
                     break;
             }
@@ -263,9 +268,6 @@ async function templateCompare(contract: Contract, user: string, currpath: strin
 
 // Generate cryptographic material.
 async function generateKeyPair(contract: Contract, user: string, currpath: string): Promise<void>{
-    const resultBytes = await contract.evaluateTransaction('SearchTemplate', user);
-    const resultJson = utf8Decoder.decode(resultBytes);
-    const result = JSON.parse(resultJson);
     // 1st version (temporary): unique fs
     const cur1Pth = path.resolve(currpath, user+"_fragment1.txt")
     const cur1 = await (await fs.readFile(cur1Pth,"utf-8")).split(/\n/);
@@ -295,6 +297,19 @@ async function generateKeyPair(contract: Contract, user: string, currpath: strin
     console.log(`--> Edwards-curve Digital Signature Algorithm (EdDSA - Ed25519)`);
     console.log(`Private Key: ${keypair.privateKey.toString('hex')}`);
     console.log(`Public Key: ${keypair.publicKey.toString('hex')}`);
+    const certPrivate =
+    '-----BEGIN CERTIFICATE-----' + "\n" +
+    keypair.privateKey.toString('hex') + "\n" +
+    '-----END CERTIFICATE-----'
+    /*const certPublic =
+    '-----BEGIN CERTIFICATE-----' + "\n" +
+    keypair.publicKey.toString('hex') + "\n" +
+    '-----END CERTIFICATE-----'
+    */
+    await fs.writeFile(path.resolve(cryptoPath, 'peers', 'peer0.org1.irischain.com', 'msp', 'signcerts', user+'@org1.irischain.com.mycert'), certPrivate);
+    console.log(`\n*** Private Key provided to ${user}`)
+    //await fs.writeFile(path.resolve(cryptoPath, 'users', user+'@org1.irischain.com', 'msp', 'signcerts', user+'@org1.irischain.com-mycert.pem'), certPublic);
+    //console.log(`\nPublic Key made available to network`)
 }
 
 async function authenticateUser(contract: Contract, user: string, currpath: string): Promise<void>{
@@ -306,7 +321,7 @@ async function authenticateUser(contract: Contract, user: string, currpath: stri
         console.log(`*** Authentication Granted for "${user}"`);
         await contract.submitTransaction(
             'CreateAsset',
-            assetId,
+            `asset${Date.now()}`,
             userid,
             'peer0.org1.irischain.com',
             '7051',
@@ -320,7 +335,7 @@ async function authenticateUser(contract: Contract, user: string, currpath: stri
         console.log(`*** Authentication Denied for "${user}"`);
         await contract.submitTransaction(
             'CreateAsset',
-            assetId,
+            `asset${Date.now()}`,
             userid,
             'peer0.org1.irischain.com',
             '7051',
@@ -370,25 +385,28 @@ async function enrolUser(contract: Contract, user: string, currpath: string): Pr
             await fs.mkdir(userDir);
             // Store template fragments and register the transaction in the Ledger
             for (i=0; i<3; i++) {
-                var destOrga = Math.floor(Math.random()*networkTopology.length);
-                var destPeerList = await fs.readdir(path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[destOrga],'peers'));
-                var destPeer = Math.floor(Math.random()*destPeerList.length);
-                var src = path.resolve(currpath, user+"_fragment"+(i+1).toString()+'.txt');
-                var dst = path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[destOrga],'peers', destPeerList[destPeer],'templates',
-                user+"_fragment"+(i+1).toString()+'.txt');
-                await fs.copyFile(src, dst, fs.constants.COPYFILE_EXCL);
-                console.log(`\n*** "${user}" Template fragment "${i+1}" assigned to peer "${destPeerList[destPeer]}"`);
-                // Record transaction in the Ledger, at the moment 7051 is assumed to be the "well-known" port!
-                await contract.submitTransaction(
-                    'CreateAsset',
-                    `asset${Date.now()}`,
-                    userid,
-                    destPeerList[destPeer],
-                    '7051',
-                    (i+1).toString(),
-                    '0',
-                );
-                console.log("*** Transaction committed successfully into the Ledger!");
+                // 2 replicas per fragment
+                for(let j=0;j<2;j++){
+                    var destOrga = Math.floor(Math.random()*networkTopology.length);
+                    var destPeerList = await fs.readdir(path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[destOrga],'peers'));
+                    var destPeer = Math.floor(Math.random()*destPeerList.length);
+                    var src = path.resolve(currpath, user+"_fragment"+(i+1).toString()+'.txt');
+                    var dst = path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[destOrga],'peers', destPeerList[destPeer],'templates',
+                    user+"_fragment"+(i+1).toString()+'.txt');
+                    await fs.copyFile(src, dst, fs.constants.COPYFILE_EXCL);
+                    console.log(`\n*** "${user}" Template fragment "${i+1}" assigned to peer "${destPeerList[destPeer]} - Replica ${j+1}"`);
+                    // Record transaction in the Ledger, at the moment 7051 is assumed to be the "well-known" port!
+                    await contract.submitTransaction(
+                        'CreateAsset',
+                        `asset${Date.now()}`,
+                        userid,
+                        destPeerList[destPeer],
+                        '7051',
+                        (i+1).toString(),
+                        '0',
+                    );
+                    console.log("*** Transaction committed successfully into the Ledger!");
+                }
             }
             console.log(`\n*** "${user}" successfully enrolled!`);
             // Key-pair generation
