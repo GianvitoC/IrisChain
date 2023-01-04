@@ -152,3 +152,8 @@ npm start
 
 # Iris Database
 ### All rights of the MMU iris database are reserved. users are not permitted to distribute, publish, copy, or disseminate this database. Please acknowledge MMU Iris Database in your paper and report. Any inqueries please forward to ccteo@mmu.edu.my. Link: http://andyzeng.github.io/downloads/MMUIrisDatabase.zip
+
+# REST API
+# from /home/ubuntu/go/src/github.com/GianvitoC/fabric-samples/iris-network/asset-transfer-basic/rest-api-typescript/scripts
+# shell
+sudo sh generateEnv.sh 
