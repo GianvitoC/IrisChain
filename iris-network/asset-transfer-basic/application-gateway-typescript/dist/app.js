@@ -27,22 +27,31 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const grpc = __importStar(require("@grpc/grpc-js"));
 const fabric_gateway_1 = require("@hyperledger/fabric-gateway");
 const crypto = __importStar(require("crypto"));
+const node_forge_1 = __importDefault(require("node-forge"));
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
 const util_1 = require("util");
+const python_shell_1 = require("python-shell");
 const channelName = envOrDefault('CHANNEL_NAME', 'mychannel');
 const chaincodeName = envOrDefault('CHAINCODE_NAME', 'basic');
 const mspId = envOrDefault('MSP_ID', 'Org1MSP');
+// Network topology
+var networkTopology = ['org1.irischain.com', 'org2.irischain.com', 'org3.irischain.com'];
+// Path to current biometric materials.
+const currPath = envOrDefault('CURR_PATH', path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 'org1.irischain.com', 'peers', 'peer0.org1.irischain.com', 'submissions'));
 // Path to crypto materials.
 const cryptoPath = envOrDefault('CRYPTO_PATH', path.resolve(__dirname, '..', '..', '..', 'organizations', 'peerOrganizations', 'org1.irischain.com'));
 // Path to user private key directory.
 const keyDirectoryPath = envOrDefault('KEY_DIRECTORY_PATH', path.resolve(cryptoPath, 'users', 'User1@org1.irischain.com', 'msp', 'keystore'));
 // Path to user certificate.
-const certPath = envOrDefault('CERT_PATH', path.resolve(cryptoPath, 'users', 'User1@org1.irischain.com', 'msp', 'signcerts', 'User1@org1.irischain.com-cert.pem'));
+const certPath = envOrDefault('CERT_PATH', path.resolve(cryptoPath, 'users', 'User1@org1.irischain.com', 'msp', 'signcerts', 'cert.pem'));
 // Path to peer tls certificate.
 const tlsCertPath = envOrDefault('TLS_CERT_PATH', path.resolve(cryptoPath, 'peers', 'peer0.org1.irischain.com', 'tls', 'ca.crt'));
 // Gateway peer endpoint.
@@ -50,7 +59,7 @@ const peerEndpoint = envOrDefault('PEER_ENDPOINT', 'localhost:7051');
 // Gateway peer SSL host name override.
 const peerHostAlias = envOrDefault('PEER_HOST_ALIAS', 'peer0.org1.irischain.com');
 const utf8Decoder = new util_1.TextDecoder();
-const assetId = `asset${Date.now()}`;
+const pArgs = process.argv;
 async function main() {
     await displayInputParameters();
     // The gRPC client connection should be shared by all Gateway connections to this endpoint.
@@ -80,18 +89,13 @@ async function main() {
         const contract = network.getContract(chaincodeName);
         // Initialize a set of asset data on the ledger using the chaincode 'InitLedger' function.
         await initLedger(contract);
-        // Return all the current assets on the ledger.
-        await getAllAssets(contract);
-        // Create a new asset on the ledger.
-        await createAsset(contract);
-        // Return all the current assets on the ledger.
-        await getAllAssets(contract);
-        // Update an existing asset asynchronously.
-        // await transferAssetAsync(contract);
-        // Get the asset details by assetID.
-        // await readAssetByID(contract);
-        // Update an asset which does not exist.
-        // await updateNonExistentAsset(contract)
+        // Performance test - Iris-Chain
+        let a = Date.now();
+        for (let i = 0; i < 1; i++) {
+            await performanceComparison(pArgs[2], pArgs[3], currPath, "iris");
+        }
+        let b = Date.now();
+        console.log((b - a) / 1000);
     }
     finally {
         gateway.close();
@@ -139,69 +143,61 @@ async function getAllAssets(contract) {
     const result = JSON.parse(resultJson);
     console.log('*** Result:', result);
 }
-/**
- * Submit a transaction synchronously, blocking until it has been committed to the ledger.
- */
-async function createAsset(contract) {
+// Generate cryptographic material.
+async function generateKeyPair(user, currpath) {
+    // 1st version (temporary): unique fs
+    const cur1Pth = path.resolve(currpath, user + "_fragment1.txt");
+    const cur1 = await (await fs_1.promises.readFile(cur1Pth, "utf-8")).split(/\n/);
+    const cur2Pth = path.resolve(currpath, user + "_fragment2.txt");
+    const cur2 = await (await fs_1.promises.readFile(cur2Pth, "utf-8")).split(/\n/);
+    const cur3Pth = path.resolve(currpath, user + "_fragment3.txt");
+    const cur3 = await (await fs_1.promises.readFile(cur3Pth, "utf-8")).split(/\n/);
+    const current = cur1.slice(0, 87381).concat(cur2.slice(0, 87381), cur3.slice(0, 87382));
+    if ((cur1.slice(0, 87381).length !== Math.round(512 * 512 / 3)) ||
+        (cur2.slice(0, 87381).length !== Math.round(512 * 512 / 3)) ||
+        (cur3.slice(0, 87382).length !== Math.round(512 * 512 / 3) + 1)) {
+        throw new Error("Submission Wrong Fragment Length!!!");
+    }
+    if (current.length !== 512 * 512) {
+        throw new Error("Submission wrong length!!!");
+    }
+    let password = "";
+    for (let i = 0; i < current.length; i++) {
+        password += current[i].slice(0, -1);
+    }
     const crypto = require("crypto");
-    const certfl = await fs_1.promises.readFile(certPath);
-    const cert = new crypto.X509Certificate(certfl);
-    const value = cert.subject;
-    let position = value.search("CN=");
-    let cname = value.slice(position + 3, value.length);
-    console.log('\n--> User Identity:  ' + cname);
-    console.log('\n--> Submit Transaction: CreateAsset, creates new asset with ID, UserID, TemplateLocation, ListeningPort, FragmentNumber and Flag arguments');
-    await contract.submitTransaction('CreateAsset', assetId, cname, 'peer0.org1.irischain.com', '7051', '1', '1');
-    console.log('*** Transaction committed successfully');
-}
-/**
- * Submit transaction asynchronously, allowing the application to process the smart contract response (e.g. update a UI)
- * while waiting for the commit notification.
- */
-async function transferAssetAsync(contract) {
-    console.log('\n--> Async Submit Transaction: TransferAsset, updates existing asset owner');
-    const commit = await contract.submitAsync('TransferAsset', {
-        arguments: [assetId, 'Saptha'],
-    });
-    const oldOwner = utf8Decoder.decode(commit.getResult());
-    console.log(`*** Successfully submitted transaction to transfer ownership from ${oldOwner} to Saptha`);
-    console.log('*** Waiting for transaction commit');
-    const status = await commit.getStatus();
-    if (!status.successful) {
-        throw new Error(`Transaction ${status.transactionId} failed to commit with status code ${status.code}`);
-    }
-    console.log('*** Transaction committed successfully');
-}
-async function readAssetByID(contract) {
-    console.log('\n--> Evaluate Transaction: ReadAsset, function returns asset attributes');
-    const resultBytes = await contract.evaluateTransaction('ReadAsset', assetId);
-    const resultJson = utf8Decoder.decode(resultBytes);
-    const result = JSON.parse(resultJson);
-    console.log('*** Result:', result);
-}
-/**
- * submitTransaction() will throw an error containing details of any error responses from the smart contract.
- */
-async function updateNonExistentAsset(contract) {
-    console.log('\n--> Submit Transaction: UpdateAsset asset70, asset70 does not exist and should return an error');
-    try {
-        await contract.submitTransaction('UpdateAsset', 'asset70', 'blue', '5', 'Tomoko', '300');
-        console.log('******** FAILED to return an error');
-    }
-    catch (error) {
-        console.log('*** Successfully caught the error: \n', error);
-    }
+    let secret = crypto.createHash('sha256').update(password).digest('hex');
+    var seed = node_forge_1.default.util.hexToBytes(secret);
+    var ed25519 = node_forge_1.default.pki.ed25519;
+    var keypair = ed25519.generateKeyPair({ seed: seed });
+    console.log("Elliptic-curve cryptography:");
+    console.log(`--> Edwards-curve Digital Signature Algorithm (EdDSA - Ed25519)`);
+    console.log(`Private Key: ${keypair.privateKey.toString('hex')}`);
+    console.log(`Public Key: ${keypair.publicKey.toString('hex')}`);
+    /**
+    const certPrivate =
+    '-----BEGIN CERTIFICATE-----' + "\n" +
+    keypair.privateKey.toString('hex') + "\n" +
+    '-----END CERTIFICATE-----'
+    await fs.writeFile(path.resolve(cryptoPath, 'peers', 'peer0.org1.irischain.com', 'msp', 'signcerts', user+'@org1.irischain.com.mycert'), certPrivate);
+    console.log(`\n*** Private Key provided to ${user}`);
+    */
+    return keypair.privateKey.toString('hex');
 }
 /**
  * envOrDefault() will return the value of an environment variable, or a default value if the variable is undefined.
  */
 function envOrDefault(key, defaultValue) {
-    return process.env[key] || defaultValue;
+    //return process.env[key] || defaultValue;
+    return defaultValue;
 }
 /**
  * displayInputParameters() will print the global scope parameters used by the main driver routine.
  */
 async function displayInputParameters() {
+    console.log("\n######################################");
+    console.log("\n--> Connection through following node:");
+    console.log(`peerHostAlias: ${peerHostAlias}`);
     console.log(`channelName:       ${channelName}`);
     console.log(`chaincodeName:     ${chaincodeName}`);
     console.log(`mspId:             ${mspId}`);
@@ -211,5 +207,45 @@ async function displayInputParameters() {
     console.log(`tlsCertPath:       ${tlsCertPath}`);
     console.log(`peerEndpoint:      ${peerEndpoint}`);
     console.log(`peerHostAlias:     ${peerHostAlias}`);
+}
+async function performanceComparison(user, imgpath, currpath, meth) {
+    switch (meth) {
+        case "iris":
+            let success = await featureExtraction(user, imgpath, currpath);
+            if (success === true) {
+                await generateKeyPair(user, currpath);
+            }
+            break;
+        case "random":
+            console.log("\n*** Random-based key-pair generation");
+            var ed25519 = node_forge_1.default.pki.ed25519;
+            var keypair = ed25519.generateKeyPair();
+            console.log("Elliptic-curve cryptography:");
+            console.log(`--> Edwards-curve Digital Signature Algorithm (EdDSA - Ed25519)`);
+            console.log(`Private Key: ${keypair.privateKey.toString('hex')}`);
+            console.log(`Public Key: ${keypair.publicKey.toString('hex')}`);
+            break;
+    }
+}
+async function featureExtraction(user, imgpath, currpath) {
+    let options = {
+        pythonPath: path.resolve(__dirname, '..', '..', '..', '..', 'feature_extraction', 'iris', 'bin', 'python3.8'),
+        args: [imgpath, user, currpath]
+    };
+    let success = new Promise((resolve, reject) => {
+        python_shell_1.PythonShell.run(path.resolve(__dirname, '..', '..', '..', '..', 'feature_extraction', 'script.py'), options, function (err, res) {
+            if (err) {
+                reject(false);
+            }
+            else {
+                resolve(true);
+            }
+            ;
+        });
+    });
+    if (await success === true) {
+        return success;
+    }
+    ;
 }
 //# sourceMappingURL=app.js.map

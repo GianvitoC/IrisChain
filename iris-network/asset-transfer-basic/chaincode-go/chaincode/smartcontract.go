@@ -176,9 +176,9 @@ func (s *SmartContract) SearchOrga(ctx contractapi.TransactionContextInterface, 
 		if err != nil {
 			return nil, err
 		}
-		if strings.Contains(getFieldString(&asset, "UserID"), userid) && getFieldInteger(&asset, "Flag") == 0 {
-			var orga = strings.Index(getFieldString(&asset, "UserID"), "@")
-			if orga > -1 {
+		var orga = strings.Index(getFieldString(&asset, "UserID"), "@")
+		if orga > -1 {
+			if getFieldString(&asset, "UserID")[:orga] == userid && getFieldInteger(&asset, "Flag") == 0 {
 				orgas = append(orgas, getFieldString(&asset, "UserID")[orga+1:])
 			}
 		}
@@ -216,34 +216,37 @@ func (s *SmartContract) SearchTemplate(ctx contractapi.TransactionContextInterfa
 		if err != nil {
 			return nil, err
 		}
-		if strings.Contains(getFieldString(&asset, "UserID"), userid) && getFieldInteger(&asset, "Flag") == 0 {
-			var assetAge = asset.ID[5:]
-			intVar, _ := strconv.Atoi(assetAge)
-			if getFieldInteger(&asset, "FragmentNumber") == 1 {
-				if intVar > age1 {
-					frg1 = User{
-						ID:             asset.ID,
-						Location:       getFieldString(&asset, "Location"),
-						Port:           getFieldInteger(&asset, "Port"),
-						FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+		var orga = strings.Index(getFieldString(&asset, "UserID"), "@")
+		if orga > -1 {
+			if getFieldString(&asset, "UserID")[:orga] == userid && getFieldInteger(&asset, "Flag") == 0 {
+				var assetAge = asset.ID[5:]
+				intVar, _ := strconv.Atoi(assetAge)
+				if getFieldInteger(&asset, "FragmentNumber") == 1 {
+					if intVar > age1 {
+						frg1 = User{
+							ID:             asset.ID,
+							Location:       getFieldString(&asset, "Location"),
+							Port:           getFieldInteger(&asset, "Port"),
+							FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+						}
 					}
-				}
-			} else if getFieldInteger(&asset, "FragmentNumber") == 2 {
-				if intVar > age2 {
-					frg2 = User{
-						ID:             asset.ID,
-						Location:       getFieldString(&asset, "Location"),
-						Port:           getFieldInteger(&asset, "Port"),
-						FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+				} else if getFieldInteger(&asset, "FragmentNumber") == 2 {
+					if intVar > age2 {
+						frg2 = User{
+							ID:             asset.ID,
+							Location:       getFieldString(&asset, "Location"),
+							Port:           getFieldInteger(&asset, "Port"),
+							FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+						}
 					}
-				}
-			} else if getFieldInteger(&asset, "FragmentNumber") == 3 {
-				if intVar > age3 {
-					frg3 = User{
-						ID:             asset.ID,
-						Location:       getFieldString(&asset, "Location"),
-						Port:           getFieldInteger(&asset, "Port"),
-						FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+				} else if getFieldInteger(&asset, "FragmentNumber") == 3 {
+					if intVar > age3 {
+						frg3 = User{
+							ID:             asset.ID,
+							Location:       getFieldString(&asset, "Location"),
+							Port:           getFieldInteger(&asset, "Port"),
+							FragmentNumber: getFieldInteger(&asset, "FragmentNumber"),
+						}
 					}
 				}
 			}
@@ -276,8 +279,11 @@ func (s *SmartContract) SearchUser(ctx contractapi.TransactionContextInterface, 
 		if err != nil {
 			return nil, err
 		}
-		if strings.Contains(getFieldString(&asset, "UserID"), userid) {
-			users = append(users, getFieldString(&asset, "UserID"))
+		var orga = strings.Index(getFieldString(&asset, "UserID"), "@")
+		if orga > -1 {
+			if getFieldString(&asset, "UserID")[:orga] == userid {
+				users = append(users, getFieldString(&asset, "UserID"))
+			}
 		}
 	}
 

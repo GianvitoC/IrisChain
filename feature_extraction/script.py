@@ -5,12 +5,6 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 from torchvision import transforms
-def listpaths(path,suffix):
-    ls = []
-    for x in path.iterdir():
-        if x.suffix==suffix:
-            ls.append(x)
-    return ls
 model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
 #print(list(model.children()))
 layer = model._modules.get('avgpool')
@@ -36,7 +30,6 @@ def copy_data(m,i,o):
 h = layer.register_forward_hook(copy_data)
 model(input_batch)
 h.remove()
-#dest = '/home/ubuntu/go/src/github.com/GianvitoC/fabric-samples/iris-network/organizations/peerOrganizations/org1.irischain.com/peers/peer0.org1.irischain.com/submissions/'
 username = sys.argv[2]
 dest = sys.argv[3] + '/'
 dp = dest + username

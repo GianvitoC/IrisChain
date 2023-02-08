@@ -25,7 +25,13 @@ router.post('/', (req,res,next)=>{
     setTimeout(()=>{
         childProcess.fork('../../application-gateway-typescript/dist/appsignin.js', [user.name, imagePath]);
     }, 5*checkTime);
-    //childProcess.fork('../../application-gateway-typescript/dist/appsignin.js', [user.name, user.image]);
+    setTimeout(()=>{
+        fs.unlink(imagePath, function(err){
+            if(err){
+                throw err;
+            }
+        });
+    }, 15*checkTime);
 }
 );
 

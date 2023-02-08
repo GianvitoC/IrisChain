@@ -20,10 +20,11 @@ class SignIn extends Component {
     }
 
     handleChange(event){
+        event.preventDefault();
         const target = event.target;
-        const value = target.value;
         const name = target.name;
         let item = {...this.state.item};
+        const value = (target.validity.valid) ? target.value : item.name;
         item[name] = value;
         this.setState({item});
     }
@@ -40,21 +41,50 @@ class SignIn extends Component {
         }
     };
     async handleSubmit(event) {
+        function readBuffer(file, start = 0, end = 2) {
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                resolve(reader.result);
+              };
+              reader.onerror = reject;
+              reader.readAsArrayBuffer(file.slice(start, end));
+            });
+        }
+        function check(headers) {
+            return (buffers, options = { offset: 0 }) =>
+                headers.every(
+                (header, index) => header === buffers[options.offset + index]
+                );
+        }
+        const isBMP = check([0x42, 0x4d]);
         event.preventDefault();
         const {item} = this.state;
-        let formData = new FormData();
-        formData.append('name', item.name);
-        formData.append('image', item.srcfile);
-        await fetch('/sign-in', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json'
-                //'Content-Type': 'application/json'
-            },
-            //body: JSON.stringify(item)
-            body: formData
-        });
-        this.props.history.push('/signedin');
+        if (item.name.length>0){
+            if(item.image.length>0){
+                const buffers = await readBuffer(item.srcfile, 0, 2); 
+                const uint8Array = new Uint8Array(buffers);
+                if(isBMP(uint8Array)){
+                    let formData = new FormData();
+                    formData.append('name', item.name);
+                    formData.append('image', item.srcfile);
+                    await fetch('/sign-in', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+                    this.props.history.push('/signedin');
+                } else {
+                    alert("Only .bmp file-types are accepted! Please check again your submitted Iris-image.");
+                }
+            } else {
+                alert('You forgot to submit your Iris-image!');
+            }
+        } else {
+            alert('Empty string is not a valid Username!');
+        }
     }
     render(){
         const {item} = this.state;
@@ -65,12 +95,12 @@ class SignIn extends Component {
                 <Container>
                     <Form onSubmit={this.handleSubmit}>
                         <FormGroup>
-                            <Label for="name">Username</Label>
-                            <Input type="text" name="name" id="name" value={item.name||''} onChange={this.handleChange}/>
+                            <Label for="name">Username &#40;alphanumeric upper/lower case and underscore allowed&#41;</Label>
+                            <Input type="text" name="name" id="name" autoComplete="off" pattern="[a-zA-Z0-9_]+" value={item.name||''} onChange={this.handleChange}/>
                         </FormGroup>
                         <div>
                             <img src={item.image}/>
-                            <input type="file" name="image" id="image" onChange={this.onImageChange}/>
+                            <input type="file" name="image" id="image" accept=".bmp" onChange={this.onImageChange}/>
                         </div>
                         <FormGroup>
                             <Button color="secondary" type="submit">Sign In</Button>

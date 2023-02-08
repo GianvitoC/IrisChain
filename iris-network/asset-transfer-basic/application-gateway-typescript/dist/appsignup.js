@@ -51,7 +51,7 @@ const cryptoPath = envOrDefault('CRYPTO_PATH', path.resolve(__dirname, '..', '..
 // Path to user private key directory.
 const keyDirectoryPath = envOrDefault('KEY_DIRECTORY_PATH', path.resolve(cryptoPath, 'users', 'User1@org1.irischain.com', 'msp', 'keystore'));
 // Path to user certificate.
-const certPath = envOrDefault('CERT_PATH', path.resolve(cryptoPath, 'users', 'User1@org1.irischain.com', 'msp', 'signcerts', 'User1@org1.irischain.com-cert.pem'));
+const certPath = envOrDefault('CERT_PATH', path.resolve(cryptoPath, 'users', 'User1@org1.irischain.com', 'msp', 'signcerts', 'cert.pem'));
 // Path to peer tls certificate.
 const tlsCertPath = envOrDefault('TLS_CERT_PATH', path.resolve(cryptoPath, 'peers', 'peer0.org1.irischain.com', 'tls', 'ca.crt'));
 // Gateway peer endpoint.
@@ -89,50 +89,6 @@ async function main() {
         const contract = network.getContract(chaincodeName);
         // Initialize a set of asset data on the ledger using the chaincode 'InitLedger' function.
         await initLedger(contract);
-        // Implemeted tests
-        /**
-        for (let i=0; i<testList.length;i++){
-            let user = testList[i];
-            switch(i){
-                case 0:
-                    // Authenticate User
-                    console.log("\n###############################################")
-                    console.log("\nTest 1: Authentication of User already enrolled")
-                    await authenticateUser(contract, user, currPath);
-                    await getAllAssets(contract);
-                    break;
-                case 1:
-                    // Enrol User
-                    console.log("\n###############################################")
-                    console.log("\nTest 2: Enrollment of new User")
-                    await enrolUser(contract, user, currPath);
-                    await getAllAssets(contract);
-                    break;
-                case 2:
-                    // Enrol User
-                    console.log("\n###############################################")
-                    console.log("\nTest 3: Successive Authentication of User just enrolled")
-                    await authenticateUser(contract, user, currPath);
-                    await getAllAssets(contract);
-                    break;
-                case 3:
-                    // Enrol User
-                    console.log("\n###############################################")
-                    console.log("\nTest 4: Successive Enrollment of User already registered")
-                    await enrolUser(contract, user, currPath);
-                    break;
-            }
-        }
-        */
-        /**
-         // Performance test - Iris-Chain
-        let a = Date.now();
-        for(let i=0;i<1;i++){
-             await performanceComparison(pArgs[2], pArgs[3], currPath, "iris");
-        }
-        let b = Date.now()
-        console.log((b-a)/1000);
-        */
         // Enrol User
         console.log("\n###############################################");
         console.log("\nEnrollment of new User");
@@ -187,26 +143,6 @@ async function getAllAssets(contract) {
     const resultJson = utf8Decoder.decode(resultBytes);
     const result = JSON.parse(resultJson);
     console.log('*** Result:', result);
-}
-// Get Organization a User belongs to.
-async function getOrga(contract, user) {
-    console.log(`\n--> Organization ${user} belongs to:`);
-    const resultBytes = await contract.evaluateTransaction('SearchOrga', user);
-    const resultJson = utf8Decoder.decode(resultBytes);
-    if (resultJson.length > 0) {
-        const result = JSON.parse(resultJson);
-        var plh = result[0];
-        for (let idx = 0; idx < result.length; idx++) {
-            if (plh !== result[idx]) {
-                throw new Error(`Organization of ${user} not unique!`);
-            }
-        }
-        console.log(plh);
-        return plh;
-    }
-    else {
-        throw new Error(`Organization of ${user} not found!`);
-    }
 }
 // Compare template stored in the Ledger with submitted biometric material.
 async function templateCompare(contract, user, currpath, curruser, verbose = "verbose") {
@@ -316,24 +252,7 @@ async function generateKeyPair(user, currpath) {
         '-----END CERTIFICATE-----';
     await fs_1.promises.writeFile(path.resolve(cryptoPath, 'peers', 'peer0.org1.irischain.com', 'msp', 'signcerts', user + '@org1.irischain.com.mycert'), certPrivate);
     console.log(`\n*** Private Key provided to ${user}`);
-}
-async function authenticateUser(contract, user, currpath) {
-    const plh = await getOrga(contract, user);
-    const userid = user + '@' + plh;
-    const cosExt = await templateCompare(contract, user, currpath, user);
-    console.log(`\n--> Register Authentication result of "${user}" on Ledger:`);
-    if (cosExt === 1) {
-        console.log(`*** Authentication Granted for "${user}"`);
-        await contract.submitTransaction('CreateAsset', `asset${Date.now()}`, userid, 'peer0.org1.irischain.com', '7051', '0', '1');
-        // Key-pair generation
-        console.log("\n--> Crypto material generation");
-        await generateKeyPair(user, currpath);
-    }
-    else {
-        console.log(`*** Authentication Denied for "${user}"`);
-        await contract.submitTransaction('CreateAsset', `asset${Date.now()}`, userid, 'peer0.org1.irischain.com', '7051', '0', '-1');
-    }
-    console.log('*** Transaction committed successfully into the Ledger!');
+    return keypair.privateKey.toString('hex');
 }
 async function enrolUser(contract, user, currpath) {
     const receivingOrga = peerHostAlias.slice(peerHostAlias.search("org"));
@@ -399,34 +318,13 @@ async function enrolUser(contract, user, currpath) {
                             flag = false;
                         }
                     }
-                    /**
-                    var destOrga = Math.floor(Math.random()*networkTopology.length);
-                    var destPeerList = await fs.readdir(path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[destOrga],'peers'));
-                    var destPeer = Math.floor(Math.random()*destPeerList.length);
-                    var src = path.resolve(currpath, user+"_fragment"+(i+1).toString()+'.txt');
-                    var dst = path.resolve(__dirname,'..', '..', '..', 'organizations', 'peerOrganizations', networkTopology[destOrga],'peers', destPeerList[destPeer],'templates',
-                    user+"_fragment"+(i+1).toString()+'.txt');
-                    await fs.copyFile(src, dst, fs.constants.COPYFILE_EXCL);
-                    console.log(`\n*** "${user}" Template fragment "${i+1}" assigned to peer "${destPeerList[destPeer]} - Replica ${j+1}"`);
-                    // Record transaction in the Ledger, at the moment 7051 is assumed to be the "well-known" port!
-                    await contract.submitTransaction(
-                        'CreateAsset',
-                        `asset${Date.now()}`,
-                        userid,
-                        destPeerList[destPeer],
-                        '7051',
-                        (i+1).toString(),
-                        '0',
-                    );
-                    console.log("*** Transaction committed successfully into the Ledger!");
-                    */
                 }
             }
             console.log(`\n*** "${user}" successfully enrolled!`);
             // Key-pair generation
             console.log("\n--> Crypto material generation");
-            await generateKeyPair(user, currpath);
-            const result = "CONGRATULATIONS " + user + ", you successfully signed-up!";
+            const privKey = await generateKeyPair(user, currpath);
+            const result = "CONGRATULATIONS " + user + ", you successfully signed-up!\nYour Private Key is: " + privKey;
             await fs_1.promises.writeFile(path.resolve(__dirname, '..', '..', 'api', 'backend', 'src', 'results', 'result.txt'), result);
         }
         else {
@@ -449,25 +347,6 @@ async function displayInputParameters() {
     console.log("\n######################################");
     console.log("\n--> Connection through following node:");
     console.log(`peerHostAlias: ${peerHostAlias}`);
-}
-async function performanceComparison(user, imgpath, currpath, meth) {
-    switch (meth) {
-        case "iris":
-            let success = await featureExtraction(user, imgpath, currpath);
-            if (success === true) {
-                await generateKeyPair(user, currpath);
-            }
-            break;
-        case "random":
-            console.log("\n*** Random-based key-pair generation");
-            var ed25519 = node_forge_1.default.pki.ed25519;
-            var keypair = ed25519.generateKeyPair();
-            console.log("Elliptic-curve cryptography:");
-            console.log(`--> Edwards-curve Digital Signature Algorithm (EdDSA - Ed25519)`);
-            console.log(`Private Key: ${keypair.privateKey.toString('hex')}`);
-            console.log(`Public Key: ${keypair.publicKey.toString('hex')}`);
-            break;
-    }
 }
 async function featureExtraction(user, imgpath, currpath) {
     let options = {
