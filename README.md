@@ -1,4 +1,4 @@
-# IrisChain
+# IrisChain - A permissioned Blockchain with secure biometric authentication
 
 ![Screenshot 2024-09-22 165440](https://github.com/user-attachments/assets/32ff2cd5-8967-4639-b96f-13aba2fc6ebe)
 
