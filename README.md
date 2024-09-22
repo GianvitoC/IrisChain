@@ -1,4 +1,7 @@
 # IrisChain
+
+![Screenshot 2024-09-22 165440](https://github.com/user-attachments/assets/32ff2cd5-8967-4639-b96f-13aba2fc6ebe)
+
 ### To work with "IrisChain": 
 ### copy the folder "iris-network" into HyperLedger-Fabric's folder "fabric-samples"
 #
