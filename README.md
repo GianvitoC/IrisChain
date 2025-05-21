@@ -2,10 +2,11 @@
 
 ![Screenshot 2024-09-22 165440](https://github.com/user-attachments/assets/32ff2cd5-8967-4639-b96f-13aba2fc6ebe)
 
-### To work with "IrisChain": 
-### copy the folder "iris-network" into HyperLedger-Fabric's folder "fabric-samples"
+### This repository implements the official code of the paper [Generating an Iris-based Seed for Key-pairs in a Blockchain Platform](https://jcoms.fesb.unist.hr/pdfs/v21n2_2024-0100_Fiore.pdf).
 #
 ## CLI commands
+### To work with "IrisChain": 
+### Copy the folder "iris-network" into HyperLedger-Fabric's folder "fabric-samples"
 ### Go into iris-network folder
 cd /yourHyperledgerFabricPath/fabric-samples/iris-network
 
